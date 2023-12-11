@@ -39,8 +39,8 @@ module user_proj_example #(
     parameter BITS = 16
 )(
 `ifdef USE_POWER_PINS
-    inout vccd1,	// User area 1 1.8V supply
-    inout vssd1,	// User area 1 digital ground
+    inout vdd,	// User area 1 1.8V supply
+    inout vss,	// User area 1 digital ground
 `endif
 
     // Wishbone Slave ports (WB MI A)
@@ -56,9 +56,9 @@ module user_proj_example #(
     output [31:0] wbs_dat_o,
 
     // Logic Analyzer Signals
-    input  [127:0] la_data_in,
-    output [127:0] la_data_out,
-    input  [127:0] la_oenb,
+    input  [63:0] la_data_in,
+    output [63:0] la_data_out,
+    input  [63:0] la_oenb,
 
     // IOs
     input  [BITS-1:0] io_in,
@@ -93,12 +93,12 @@ module user_proj_example #(
     assign irq = 3'b000;	// Unused
 
     // LA
-    assign la_data_out = {{(128-BITS){1'b0}}, count};
-    // Assuming LA probes [63:32] are for controlling the count register  
-    assign la_write = ~la_oenb[63:64-BITS] & ~{BITS{valid}};
-    // Assuming LA probes [65:64] are for controlling the count clk & reset  
-    assign clk = (~la_oenb[64]) ? la_data_in[64]: wb_clk_i;
-    assign rst = (~la_oenb[65]) ? la_data_in[65]: wb_rst_i;
+    assign la_data_out = {{(64-BITS){1'b0}}, count};
+    // Assuming LA probes [61:46] are for controlling the count register  
+    assign la_write = ~la_oenb[61:62-BITS] & ~{BITS{valid}};
+    // Assuming LA probes [63:62] are for controlling the count clk & reset  
+    assign clk = (~la_oenb[62]) ? la_data_in[62]: wb_clk_i;
+    assign rst = (~la_oenb[63]) ? la_data_in[63]: wb_rst_i;
 
     counter #(
         .BITS(BITS)
@@ -111,7 +111,7 @@ module user_proj_example #(
         .wdata(wbs_dat_i[BITS-1:0]),
         .wstrb(wstrb),
         .la_write(la_write),
-        .la_input(la_data_in[63:64-BITS]),
+        .la_input(la_data_in[61:62-BITS]),
         .count(count)
     );
 
@@ -134,12 +134,12 @@ module counter #(
 
     always @(posedge clk) begin
         if (reset) begin
-            count <= 1'b0;
-            ready <= 1'b0;
+            count <= 0;
+            ready <= 0;
         end else begin
             ready <= 1'b0;
             if (~|la_write) begin
-                count <= count + 1'b1;
+                count <= count + 1;
             end
             if (valid && !ready) begin
                 ready <= 1'b1;
